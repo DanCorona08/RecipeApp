@@ -37,15 +37,21 @@ The app uses SQLite for persistent storage and GTK+ for the graphical user inter
 
 ### **Step 2: Install Dependencies**
 1. Install the required libraries
+
    sudo apt update
+
    sudo apt install build-essential libgtk-3-dev sqlite3 libsqlite3-dev
-2. Verify that pkg-config can find the GTK+ libraries
+   
+3. Verify that pkg-config can find the GTK+ libraries
+
    pkg-config --cflags --libs gtk+-3.0
 
 ### **Step 3: Compile the Project**
 1. Run the following command in the project directory:
+
    g++ -std=c++17 -o recipe_app main.cpp RecipeManager.cpp `pkg-config --cflags --libs gtk+-3.0` -lsqlite3
 
 ### **Usage**
 1. Launch the app from the terminal:
+
    ./recipe_app
