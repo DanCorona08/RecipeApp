@@ -51,6 +51,6 @@ grid {
 /* Add a subtle border to separate sections */
 separator {
     background-color: #3a3d41;
-    height: 2px;
+    min-height: 2px;
     margin: 20px 0;
 }

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cctype>
 #include <fstream>
+#include <curl/curl.h>
 #include <nlohmann/json.hpp>
 
 // Helper Function: Convert to Lowercase
@@ -85,6 +86,64 @@ bool RecipeManager::addRecipe(const std::string &name, const std::vector<std::st
         std::cerr << "Failed to prepare insert statement: " << sqlite3_errmsg(db) << std::endl;
     }
     return false;
+}
+
+// API Integration: Helper function for HTTP requests
+static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp) {
+    ((std::string *)userp)->append((char *)contents, size * nmemb);
+    return size * nmemb;
+}
+
+// API Integration: Search recipes by ingredient
+std::vector<Recipe> RecipeManager::searchByIngredient(const std::string &ingredient) {
+    std::vector<Recipe> recipes;
+    std::string readBuffer;
+
+    CURL *curl = curl_easy_init();
+    if (curl) {
+        std::string url = "https://www.themealdb.com/api/json/v1/1/filter.php?i=" + ingredient;
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+        curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+    }
+
+    // Parse JSON response
+    nlohmann::json jsonData = nlohmann::json::parse(readBuffer, nullptr, false);
+    if (!jsonData.is_discarded() && jsonData["meals"].is_array()) {
+        for (const auto &meal : jsonData["meals"]) {
+            Recipe recipe;
+            recipe.id = std::stoi(meal["idMeal"].get<std::string>());
+            recipe.name = meal["strMeal"].get<std::string>();
+            recipes.push_back(recipe);
+        }
+    }
+
+    return recipes;
+}
+
+// API Integration: Fetch recipe instructions by ID
+std::string RecipeManager::getRecipeInstructions(int recipeID) {
+    std::string readBuffer;
+
+    CURL *curl = curl_easy_init();
+    if (curl) {
+        std::string url = "https://www.themealdb.com/api/json/v1/1/lookup.php?i=" + std::to_string(recipeID);
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+        curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+    }
+
+    // Parse JSON response
+    nlohmann::json jsonData = nlohmann::json::parse(readBuffer, nullptr, false);
+    if (!jsonData.is_discarded() && jsonData["meals"].is_array()) {
+        return jsonData["meals"][0]["strInstructions"].get<std::string>();
+    }
+
+    return "No instructions found.";
 }
 
 // List All Recipes

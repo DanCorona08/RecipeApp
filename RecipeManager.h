@@ -7,6 +7,7 @@
 
 // Recipe Structure
 struct Recipe {
+    int id = 0; // ID for API-based recipes
     std::string name;
     std::vector<std::string> ingredients;
     std::string category;
@@ -35,6 +36,10 @@ public:
 
     // Database Management
     void clearDatabase();
+
+    // API Integration
+    std::vector<Recipe> searchByIngredient(const std::string& ingredient); // Search recipes by ingredient
+    std::string getRecipeInstructions(int recipeID); // Fetch instructions by recipe ID
 
 private:
     sqlite3 *db; // SQLite database connection
