@@ -1,22 +1,29 @@
 #include "RecipeManager.h"
-#include <gtk/gtk.h>
+#include <iostream>
+#include <sstream>
 #include <algorithm>
 #include <cctype>
-#include <sstream>
-#include <iostream>
+#include <fstream>
+#include <nlohmann/json.hpp>
 
-// Helper function to convert a string to lowercase
+// Helper Function: Convert to Lowercase
 std::string toLower(const std::string &str) {
     std::string result = str;
     std::transform(result.begin(), result.end(), result.begin(), ::tolower);
     return result;
 }
 
-// Constructor
+// Helper Function: Trim Whitespace
+std::string trim(const std::string &str) {
+    size_t start = str.find_first_not_of(" \t");
+    size_t end = str.find_last_not_of(" \t");
+    return (start == std::string::npos) ? "" : str.substr(start, end - start + 1);
+}
+
+// Constructor: Initialize the SQLite Database
 RecipeManager::RecipeManager() {
-    // Open the SQLite database
     if (sqlite3_open("recipes.db", &db)) {
-        g_print("Failed to open database: %s\n", sqlite3_errmsg(db));
+        std::cerr << "Failed to open database: " << sqlite3_errmsg(db) << std::endl;
         db = nullptr;
         return;
     }
@@ -26,95 +33,29 @@ RecipeManager::RecipeManager() {
         CREATE TABLE IF NOT EXISTS recipes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            ingredients TEXT NOT NULL
+            ingredients TEXT NOT NULL,
+            category TEXT NOT NULL,
+            instructions TEXT NOT NULL DEFAULT '',
+            favorite INTEGER DEFAULT 0
         );
     )";
 
     char *errMsg = nullptr;
     if (sqlite3_exec(db, createTableSQL, nullptr, nullptr, &errMsg) != SQLITE_OK) {
-        g_print("Failed to create table: %s\n", errMsg);
+        std::cerr << "Failed to create table: " << errMsg << std::endl;
         sqlite3_free(errMsg);
     }
-
-    // Load existing recipes from the database
-    loadRecipes();
 }
 
-// Destructor
+// Destructor: Close the SQLite Database
 RecipeManager::~RecipeManager() {
     if (db) {
         sqlite3_close(db);
     }
 }
 
-bool RecipeManager::deleteRecipe(const std::string &name) {
-    // Remove from database
-    const char *deleteSQL = "DELETE FROM recipes WHERE name = ?;";
-    sqlite3_stmt *stmt;
-    if (sqlite3_prepare_v2(db, deleteSQL, -1, &stmt, nullptr) == SQLITE_OK) {
-        sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_STATIC);
-
-        if (sqlite3_step(stmt) != SQLITE_DONE) {
-            g_print("Failed to delete recipe: %s\n", sqlite3_errmsg(db));
-            sqlite3_finalize(stmt);
-            return false;
-        }
-
-        sqlite3_finalize(stmt);
-
-        // Remove from in-memory cache
-        auto it = std::remove_if(recipes.begin(), recipes.end(),
-                                 [&](const auto &recipe) { return recipe.first == name; });
-
-        if (it != recipes.end()) {
-            recipes.erase(it, recipes.end());
-            g_print("Recipe '%s' deleted successfully.\n", name.c_str());
-            return true;
-        }
-    } else {
-        g_print("Failed to prepare delete statement: %s\n", sqlite3_errmsg(db));
-    }
-
-    return false;
-}
-
-// Load recipes from the database into memory
-void RecipeManager::loadRecipes() {
-    const char *selectSQL = "SELECT name, ingredients FROM recipes;";
-    sqlite3_stmt *stmt;
-
-    if (sqlite3_prepare_v2(db, selectSQL, -1, &stmt, nullptr) == SQLITE_OK) {
-        while (sqlite3_step(stmt) == SQLITE_ROW) {
-            std::string name = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
-            std::string ingredientsStr = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
-
-            // Split ingredients string into a vector
-            std::vector<std::string> ingredients;
-            std::istringstream iss(ingredientsStr);
-            std::string ingredient;
-            while (std::getline(iss, ingredient, ',')) {
-                ingredients.push_back(ingredient);
-            }
-
-            recipes.push_back({name, ingredients});
-        }
-        sqlite3_finalize(stmt);
-    } else {
-        g_print("Failed to load recipes: %s\n", sqlite3_errmsg(db));
-    }
-}
-
-// Add a recipe, avoiding duplicates
-void RecipeManager::addRecipe(const std::string &name, const std::vector<std::string> &ingredients) {
-    // Check for duplicates
-    for (const auto &recipe : recipes) {
-        if (recipe.first == name) {
-            g_print("Recipe '%s' already exists. Skipping.\n", name.c_str());
-            return;
-        }
-    }
-
-    // Convert ingredients to a comma-separated string
+// Add a Recipe
+bool RecipeManager::addRecipe(const std::string &name, const std::vector<std::string> &ingredients, const std::string &category, const std::string &instructions) {
     std::ostringstream oss;
     for (size_t i = 0; i < ingredients.size(); ++i) {
         oss << ingredients[i];
@@ -124,62 +65,188 @@ void RecipeManager::addRecipe(const std::string &name, const std::vector<std::st
     }
     std::string ingredientsStr = oss.str();
 
-    // Insert into the database
-    const char *insertSQL = "INSERT INTO recipes (name, ingredients) VALUES (?, ?);";
+    const char *insertSQL = "INSERT INTO recipes (name, ingredients, category, instructions) VALUES (?, ?, ?, ?);";
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(db, insertSQL, -1, &stmt, nullptr) == SQLITE_OK) {
         sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_STATIC);
         sqlite3_bind_text(stmt, 2, ingredientsStr.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 3, category.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 4, instructions.c_str(), -1, SQLITE_STATIC);
 
-        if (sqlite3_step(stmt) != SQLITE_DONE) {
-            g_print("Failed to insert recipe: %s\n", sqlite3_errmsg(db));
+        if (sqlite3_step(stmt) == SQLITE_DONE) {
+            sqlite3_finalize(stmt);
+            return true;
         } else {
-            // Add to in-memory cache
-            recipes.push_back({name, ingredients});
-            g_print("Recipe Added: %s\n", name.c_str());
+            std::cerr << "Failed to add recipe: " << sqlite3_errmsg(db) << std::endl;
         }
 
         sqlite3_finalize(stmt);
     } else {
-        g_print("Failed to prepare insert statement: %s\n", sqlite3_errmsg(db));
+        std::cerr << "Failed to prepare insert statement: " << sqlite3_errmsg(db) << std::endl;
     }
+    return false;
 }
 
-// Find matching recipes
-std::vector<std::string> RecipeManager::findRecipes(const std::vector<std::string> &userIngredients) {
-    std::vector<std::string> matches;
+// List All Recipes
+std::vector<Recipe> RecipeManager::listAllRecipes() const {
+    std::vector<Recipe> recipes;
 
-    // Convert user ingredients to lowercase
-    std::vector<std::string> lowerUserIngredients;
-    for (const auto &ingredient : userIngredients) {
-        lowerUserIngredients.push_back(toLower(ingredient));
+    const char *selectSQL = "SELECT name, ingredients, category, instructions, favorite FROM recipes;";
+    sqlite3_stmt *stmt;
+
+    if (sqlite3_prepare_v2(db, selectSQL, -1, &stmt, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            Recipe recipe;
+            recipe.name = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+            std::string ingredientsStr = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+            recipe.category = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
+            recipe.instructions = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 3));
+            recipe.isFavorite = sqlite3_column_int(stmt, 3);
+
+            // Parse ingredients into a vector
+            std::istringstream iss(ingredientsStr);
+            std::string ingredient;
+            while (std::getline(iss, ingredient, ',')) {
+                recipe.ingredients.push_back(trim(ingredient));
+            }
+
+            recipes.push_back(recipe);
+        }
+        sqlite3_finalize(stmt);
+    } else {
+        std::cerr << "Failed to retrieve recipes: " << sqlite3_errmsg(db) << std::endl;
     }
 
-    // Check each recipe
-    for (const auto &recipe : recipes) {
-        const std::vector<std::string> &recipeIngredients = recipe.second;
+    return recipes;
+}
 
-        // Debug: Print recipe being checked
-        g_print("Checking Recipe: %s\n", recipe.first.c_str());
+// Toggle Recipe as Favorite
+bool RecipeManager::toggleFavorite(const std::string &name) {
+    const char *updateSQL = R"(
+        UPDATE recipes
+        SET favorite = NOT favorite
+        WHERE name = ?;
+    )";
 
-        bool allIngredientsMatch = std::all_of(recipeIngredients.begin(), recipeIngredients.end(),
-            [&](const std::string &recipeIngredient) {
-                return std::find(lowerUserIngredients.begin(), lowerUserIngredients.end(),
-                                 toLower(recipeIngredient)) != lowerUserIngredients.end();
-            });
+    sqlite3_stmt *stmt;
+    if (sqlite3_prepare_v2(db, updateSQL, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_STATIC);
 
-        if (allIngredientsMatch) {
-            g_print(" - Match found: %s\n", recipe.first.c_str());
-            matches.push_back(recipe.first);
+        if (sqlite3_step(stmt) == SQLITE_DONE) {
+            sqlite3_finalize(stmt);
+            return true;
         } else {
-            g_print(" - No match for: %s\n", recipe.first.c_str());
+            std::cerr << "Failed to update favorite status: " << sqlite3_errmsg(db) << std::endl;
+        }
+
+        sqlite3_finalize(stmt);
+    } else {
+        std::cerr << "Failed to prepare update statement: " << sqlite3_errmsg(db) << std::endl;
+    }
+    return false;
+}
+
+// List Favorite Recipes
+std::string RecipeManager::listFavoriteRecipes() const {
+    std::string favoriteList;
+    const char *selectSQL = "SELECT name, category FROM recipes WHERE favorite = 1;";
+    sqlite3_stmt *stmt;
+
+    if (sqlite3_prepare_v2(db, selectSQL, -1, &stmt, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            std::string name = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+            std::string category = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+            favoriteList += name + " (" + category + ")\n";
+        }
+        sqlite3_finalize(stmt);
+    } else {
+        std::cerr << "Failed to retrieve favorite recipes: " << sqlite3_errmsg(db) << std::endl;
+    }
+
+    return favoriteList;
+}
+
+// Filter Recipes by Category
+std::string RecipeManager::filterRecipesByCategory(const std::string &category) const {
+    std::string filteredList;
+    const char *selectSQL = "SELECT name, ingredients FROM recipes WHERE category = ?;";
+    sqlite3_stmt *stmt;
+
+    if (sqlite3_prepare_v2(db, selectSQL, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_text(stmt, 1, category.c_str(), -1, SQLITE_STATIC);
+
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            std::string name = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+            std::string ingredients = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+            filteredList += name + ": " + ingredients + "\n";
+        }
+        sqlite3_finalize(stmt);
+    } else {
+        std::cerr << "Failed to filter recipes: " << sqlite3_errmsg(db) << std::endl;
+    }
+
+    return filteredList;
+}
+
+// Export Recipes to JSON
+bool RecipeManager::exportRecipes(const std::string &filePath) const {
+    std::ofstream outFile(filePath);
+    if (!outFile) {
+        std::cerr << "Failed to open file for export." << std::endl;
+        return false;
+    }
+
+    nlohmann::json jsonExport;
+
+    for (const auto &recipe : listAllRecipes()) {
+        nlohmann::json recipeJson;
+        recipeJson["name"] = recipe.name;
+        recipeJson["ingredients"] = recipe.ingredients;
+        recipeJson["category"] = recipe.category;
+        recipeJson["instructions"] = recipe.instructions;
+        recipeJson["favorite"] = recipe.isFavorite;
+
+        jsonExport.push_back(recipeJson);
+    }
+
+    outFile << jsonExport.dump(4);
+    outFile.close();
+    return true;
+}
+
+// Import Recipes from JSON
+bool RecipeManager::importRecipes(const std::string &filePath) {
+    std::ifstream inFile(filePath);
+    if (!inFile) {
+        std::cerr << "Failed to open file for import." << std::endl;
+        return false;
+    }
+
+    nlohmann::json jsonImport;
+    inFile >> jsonImport;
+
+    for (const auto &recipeJson : jsonImport) {
+        std::string name = recipeJson["name"];
+        std::vector<std::string> ingredients = recipeJson["ingredients"];
+        std::string category = recipeJson["category"];
+        std::string instructions = recipeJson["instructions"];
+        bool isFavorite = recipeJson["favorite"];
+
+        addRecipe(name, ingredients, category, instructions);
+        if (isFavorite) {
+            toggleFavorite(name);
         }
     }
 
-    return matches;
+    return true;
 }
 
-// List all recipes
-std::vector<std::pair<std::string, std::vector<std::string>>> RecipeManager::listAllRecipes() const {
-    return recipes;
+// Clear Database
+void RecipeManager::clearDatabase() {
+    const char *deleteSQL = "DELETE FROM recipes;";
+    char *errMsg = nullptr;
+    if (sqlite3_exec(db, deleteSQL, nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        std::cerr << "Failed to clear database: " << errMsg << std::endl;
+        sqlite3_free(errMsg);
+    }
 }

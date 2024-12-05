@@ -1,0 +1,22 @@
+[
+    {
+        "category": "Dinner",
+        "favorite": true,
+        "ingredients": [
+            "pasta",
+            "tomato sauce",
+            "cheese"
+        ],
+        "name": "Pasta"
+    },
+    {
+        "category": "Lunch",
+        "favorite": false,
+        "ingredients": [
+            "water",
+            "oil",
+            "flour"
+        ],
+        "name": "Bread"
+    }
+]

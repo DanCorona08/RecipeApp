@@ -6,37 +6,24 @@
 // Global RecipeManager instance
 RecipeManager manager;
 
-// Debug function to print all recipes
-void debugPrintAllRecipes() {
-    std::vector<std::pair<std::string, std::vector<std::string>>> recipes = manager.listAllRecipes();
-    g_print("Recipes in Database:\n");
-    for (const auto &[name, ingredients] : recipes) {
-        g_print(" - %s: ", name.c_str());
-        for (const auto &ingredient : ingredients) {
-            g_print("%s, ", ingredient.c_str());
-        }
-        g_print("\n");
-    }
-}
-
+// Callback to view all recipes
 void on_view_recipes_clicked(GtkWidget *widget, gpointer data) {
     GtkWidget *label = GTK_WIDGET(data);
 
-    // Get all recipes from the manager
-    auto recipes = manager.listAllRecipes();
-
-    // Format recipes for display
+    auto recipes = manager.listAllRecipes(); // Get recipes as std::vector<Recipe>
     std::string recipeList;
-    for (const auto &[name, ingredients] : recipes) {
-        recipeList += name + ": ";
-        for (const auto &ingredient : ingredients) {
+
+    for (const auto &recipe : recipes) { // Iterate through the Recipe structure
+        recipeList += recipe.name + " (" + recipe.category + "):\n"; // Include category
+        recipeList += "Ingredients: ";
+        for (const auto &ingredient : recipe.ingredients) {
             recipeList += ingredient + ", ";
         }
-        if (!ingredients.empty()) {
+        if (!recipe.ingredients.empty()) {
             recipeList.pop_back(); // Remove trailing space
             recipeList.pop_back(); // Remove trailing comma
         }
-        recipeList += "\n";
+        recipeList += "\nInstructions: " + recipe.instructions + "\n\n";
     }
 
     if (recipeList.empty()) {
@@ -46,267 +33,201 @@ void on_view_recipes_clicked(GtkWidget *widget, gpointer data) {
     gtk_label_set_text(GTK_LABEL(label), recipeList.c_str());
 }
 
-void on_delete_recipe_clicked(GtkWidget *widget, gpointer data) {
-    GtkWidget **widgets = (GtkWidget **)data;
-
-    // Extract widgets
-    GtkWidget *entry = widgets[0];
-    GtkWidget *statusLabel = widgets[1];
-
-    const char *recipeName = gtk_entry_get_text(GTK_ENTRY(entry));
-
-    // Validate input
-    if (strlen(recipeName) == 0) {
-        gtk_label_set_text(GTK_LABEL(statusLabel), "Please enter a recipe name.");
-        return;
-    }
-
-    // Attempt to delete the recipe
-    if (manager.deleteRecipe(recipeName)) {
-        gtk_label_set_text(GTK_LABEL(statusLabel), "Recipe deleted successfully.");
-    } else {
-        gtk_label_set_text(GTK_LABEL(statusLabel), "Failed to delete recipe. Recipe may not exist.");
-    }
-}
-
-// Callback function for the "Find Recipes" button
-void on_find_recipes_clicked(GtkWidget *widget, gpointer data) {
-    GtkWidget **widgets = (GtkWidget **)data;
-
-    // Extract widgets from the array
-    GtkWidget *entry = widgets[0];
-    GtkWidget *label = widgets[1];
-
-    // Debug: Print received widget pointers
-    g_print("Received Widget Pointers for Find Recipes:\n");
-    g_print(" - Entry: %p\n", (void *)entry);
-    g_print(" - Label: %p\n", (void *)label);
-
-    // Validate widget types
-    if (!GTK_IS_ENTRY(entry)) {
-        gtk_label_set_text(GTK_LABEL(label), "Error: Entry widget is invalid or missing.");
-        return;
-    }
-
-    if (!GTK_IS_LABEL(label)) {
-        g_print("Error: Label widget is invalid or missing.\n");
-        return;
-    }
-
-    // Get user input from the entry
-    const char *text = gtk_entry_get_text(GTK_ENTRY(entry));
-    if (text == NULL || strlen(text) == 0) {
-        gtk_label_set_text(GTK_LABEL(label), "Please enter some ingredients.");
-        return;
-    }
-
-    std::string ingredients = text;
-
-    // Parse ingredients into a vector
-    auto trim = [](const std::string &str) {
-        size_t start = str.find_first_not_of(" \t");
-        size_t end = str.find_last_not_of(" \t");
-        return (start == std::string::npos) ? "" : str.substr(start, end - start + 1);
-    };
-
-    std::vector<std::string> userIngredients;
-    size_t pos = 0;
-    while ((pos = ingredients.find(',')) != std::string::npos) {
-        userIngredients.push_back(trim(ingredients.substr(0, pos)));
-        ingredients.erase(0, pos + 1);
-    }
-    userIngredients.push_back(trim(ingredients));
-
-    // Debug: Print parsed ingredients
-    g_print("Parsed User Ingredients:\n");
-    for (const auto &ingredient : userIngredients) {
-        g_print(" - %s\n", ingredient.c_str());
-    }
-
-    // Find matching recipes
-    auto recipes = manager.findRecipes(userIngredients);
-
-    // Format and display results
-    if (recipes.empty()) {
-        gtk_label_set_text(GTK_LABEL(label), "No matching recipes found.");
-    } else {
-        std::string result;
-        for (const auto &recipe : recipes) {
-            result += recipe + "\n";
-        }
-        gtk_label_set_text(GTK_LABEL(label), result.c_str());
-    }
-}
-
-// Callback function for the "Add Recipe" button
+// Callback to add a recipe
 void on_add_recipe_clicked(GtkWidget *widget, gpointer data) {
     GtkWidget **widgets = (GtkWidget **)data;
 
-    // Extract widgets from the array
     GtkWidget *nameEntry = widgets[0];
     GtkWidget *ingredientsEntry = widgets[1];
-    GtkWidget *statusLabel = widgets[2];
+    GtkWidget *categoryDropdown = widgets[2];
+    GtkWidget *instructionsTextView = widgets[3];
+    GtkWidget *statusLabel = widgets[4];
 
-    // Debug: Print received widget pointers
-    g_print("Received Widget Pointers for Add Recipe:\n");
-    g_print(" - Name Entry: %p\n", (void *)nameEntry);
-    g_print(" - Ingredients Entry: %p\n", (void *)ingredientsEntry);
-    g_print(" - Status Label: %p\n", (void *)statusLabel);
-
-    // Validate widget types
-    g_return_if_fail(GTK_IS_ENTRY(nameEntry));
-    g_return_if_fail(GTK_IS_ENTRY(ingredientsEntry));
-    g_return_if_fail(GTK_IS_LABEL(statusLabel));
-
-    // Get user input from the entry fields
     const char *name = gtk_entry_get_text(GTK_ENTRY(nameEntry));
     const char *ingredients = gtk_entry_get_text(GTK_ENTRY(ingredientsEntry));
+    const char *category = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(categoryDropdown));
 
-    // Validate inputs
-    if (strlen(name) == 0 || strlen(ingredients) == 0) {
-        gtk_label_set_text(GTK_LABEL(statusLabel), "Please enter both a name and ingredients.");
+    GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(instructionsTextView));
+    GtkTextIter start, end;
+    gtk_text_buffer_get_bounds(buffer, &start, &end);
+    const char *instructions = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
+
+    if (!name || strlen(name) == 0 || !ingredients || strlen(ingredients) == 0 ||
+        !category || strlen(category) == 0 || !instructions || strlen(instructions) == 0) {
+        gtk_label_set_text(GTK_LABEL(statusLabel), "Please fill all fields.");
         return;
     }
-
-    // Parse ingredients into a vector
-    auto trim = [](const std::string &str) {
-        size_t start = str.find_first_not_of(" \t");
-        size_t end = str.find_last_not_of(" \t");
-        return (start == std::string::npos) ? "" : str.substr(start, end - start + 1);
-    };
 
     std::vector<std::string> ingredientList;
     std::string ingredientsStr = ingredients;
     size_t pos = 0;
     while ((pos = ingredientsStr.find(',')) != std::string::npos) {
-        ingredientList.push_back(trim(ingredientsStr.substr(0, pos)));
+        ingredientList.push_back(ingredientsStr.substr(0, pos));
         ingredientsStr.erase(0, pos + 1);
     }
-    ingredientList.push_back(trim(ingredientsStr));
+    ingredientList.push_back(ingredientsStr);
 
-    // Debug: Print parsed ingredients
-    g_print("Parsed Ingredients for Add Recipe:\n");
-    for (const auto &ingredient : ingredientList) {
-        g_print(" - %s\n", ingredient.c_str());
-    }
-
-    // Add the recipe to the database
-    try {
-        manager.addRecipe(name, ingredientList);
+    if (manager.addRecipe(name, ingredientList, category, instructions)) {
         gtk_label_set_text(GTK_LABEL(statusLabel), "Recipe added successfully!");
-    } catch (const std::exception &e) {
-        gtk_label_set_text(GTK_LABEL(statusLabel), "Failed to add recipe.");
+    } else {
+        gtk_label_set_text(GTK_LABEL(statusLabel), "Error adding recipe.");
     }
+}
+
+// Callback to clear the database
+void on_clear_database_clicked(GtkWidget *widget, gpointer data) {
+    GtkWidget *statusLabel = GTK_WIDGET(data);
+
+    GtkWidget *dialog = gtk_message_dialog_new(
+        NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_WARNING,
+        GTK_BUTTONS_YES_NO, "Are you sure you want to clear all recipes?");
+    gint response = gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+
+    if (response == GTK_RESPONSE_YES) {
+        manager.clearDatabase();
+        gtk_label_set_text(GTK_LABEL(statusLabel), "Database cleared successfully.");
+    } else {
+        gtk_label_set_text(GTK_LABEL(statusLabel), "Clear operation canceled.");
+    }
+}
+
+// Callback to export recipes
+void on_export_recipes_clicked(GtkWidget *widget, gpointer data) {
+    if (manager.exportRecipes("recipes_export.json")) {
+        g_print("Recipes exported successfully to recipes_export.json\n");
+    } else {
+        g_print("Failed to export recipes.\n");
+    }
+}
+
+// Callback to import recipes
+void on_import_recipes_clicked(GtkWidget *widget, gpointer data) {
+    if (manager.importRecipes("recipes_export.json")) {
+        g_print("Recipes imported successfully from recipes_export.json\n");
+    } else {
+        g_print("Failed to import recipes.\n");
+    }
+}
+
+// Callback to mark a recipe as favorite
+void on_mark_favorite_clicked(GtkWidget *widget, gpointer data) {
+    GtkWidget *entry = GTK_WIDGET(data); // Assume entry is passed as data
+    const char *recipeName = gtk_entry_get_text(GTK_ENTRY(entry));
+
+    if (manager.toggleFavorite(recipeName)) {
+        g_print("Recipe '%s' marked as favorite.\n", recipeName);
+    } else {
+        g_print("Failed to mark recipe as favorite.\n");
+    }
+}
+
+// Callback to view favorite recipes
+void on_view_favorite_recipes_clicked(GtkWidget *widget, gpointer data) {
+    GtkWidget *label = GTK_WIDGET(data); // Assume label is passed as data
+    std::string favoriteList = manager.listFavoriteRecipes();
+
+    if (favoriteList.empty()) {
+        favoriteList = "No favorite recipes found.";
+    }
+
+    gtk_label_set_text(GTK_LABEL(label), favoriteList.c_str());
 }
 
 // Main application activation function
 static void activate(GtkApplication *app, gpointer user_data) {
-    GtkWidget *window, *grid, *findEntry, *addNameEntry, *addIngredientsEntry, *findLabel, *addStatusLabel, *findButton, *addButton;
+    GtkWidget *window;
+    GtkWidget *grid;
 
-    // Create the main window
     window = gtk_application_window_new(app);
-    gtk_window_set_title(GTK_WINDOW(window), "Recipe Recommendation App");
-    gtk_window_set_default_size(GTK_WINDOW(window), 600, 400);
+    gtk_window_set_title(GTK_WINDOW(window), "Recipe Manager");
+    gtk_window_set_default_size(GTK_WINDOW(window), 800, 600);
 
-    // Create a grid layout
     grid = gtk_grid_new();
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 10);
     gtk_container_add(GTK_CONTAINER(window), grid);
 
-    // Section 1: Find Recipes
-    GtkWidget *findLabelTitle = gtk_label_new("Find Recipes:");
-    gtk_grid_attach(GTK_GRID(grid), findLabelTitle, 0, 0, 1, 1);
-
-    findEntry = gtk_entry_new();
-    gtk_entry_set_placeholder_text(GTK_ENTRY(findEntry), "Enter ingredients (comma-separated)");
-    gtk_grid_attach(GTK_GRID(grid), findEntry, 0, 1, 2, 1);
-
-    findLabel = gtk_label_new("Your results will appear here...");
-    gtk_grid_attach(GTK_GRID(grid), findLabel, 0, 2, 3, 1);
-
-    findButton = gtk_button_new_with_label("Find Recipes");
-    gtk_grid_attach(GTK_GRID(grid), findButton, 2, 1, 1, 1);
-
-    GtkWidget **findWidgets = new GtkWidget *[2]{findEntry, findLabel};
-    g_signal_connect(findButton, "clicked", G_CALLBACK(on_find_recipes_clicked), findWidgets);
-
-    // Debug: Print pointers for Find Recipes widgets
-    g_print("Find Recipes Section:\n");
-    g_print(" - Entry Widget: %p\n", (void *)findEntry);
-    g_print(" - Label Widget: %p\n", (void *)findLabel);
-
-    // Section 2: Add Recipe
-    GtkWidget *addLabelTitle = gtk_label_new("Add a Recipe:");
-    gtk_grid_attach(GTK_GRID(grid), addLabelTitle, 0, 3, 1, 1);
-
-    addNameEntry = gtk_entry_new();
+    // Section: Add Recipe
+    GtkWidget *addNameEntry = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(addNameEntry), "Recipe Name");
-    gtk_grid_attach(GTK_GRID(grid), addNameEntry, 0, 4, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), addNameEntry, 0, 0, 1, 1);
 
-    addIngredientsEntry = gtk_entry_new();
+    GtkWidget *addIngredientsEntry = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(addIngredientsEntry), "Ingredients (comma-separated)");
-    gtk_grid_attach(GTK_GRID(grid), addIngredientsEntry, 1, 4, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), addIngredientsEntry, 1, 0, 1, 1);
 
-    addButton = gtk_button_new_with_label("Add Recipe");
-    gtk_grid_attach(GTK_GRID(grid), addButton, 2, 4, 1, 1);
+    GtkWidget *categoryDropdown = gtk_combo_box_text_new();
+    gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(categoryDropdown), NULL, "Breakfast");
+    gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(categoryDropdown), NULL, "Lunch");
+    gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(categoryDropdown), NULL, "Dinner");
+    gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(categoryDropdown), NULL, "Dessert");
+    gtk_grid_attach(GTK_GRID(grid), categoryDropdown, 2, 0, 1, 1);
 
-    addStatusLabel = gtk_label_new("");
-    gtk_grid_attach(GTK_GRID(grid), addStatusLabel, 0, 5, 3, 1);
+    GtkWidget *addInstructionsTextView = gtk_text_view_new();
+    gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(addInstructionsTextView), GTK_WRAP_WORD);
+    gtk_text_view_set_justification(GTK_TEXT_VIEW(addInstructionsTextView), GTK_JUSTIFY_LEFT);
+    gtk_grid_attach(GTK_GRID(grid), addInstructionsTextView, 0, 1, 3, 2); // Multi-line instructions spanning rows
 
-    GtkWidget **addWidgets = new GtkWidget *[3]{addNameEntry, addIngredientsEntry, addStatusLabel};
+    GtkWidget *addStatusLabel = gtk_label_new("");
+    gtk_grid_attach(GTK_GRID(grid), addStatusLabel, 0, 3, 3, 1);
+
+    GtkWidget *addButton = gtk_button_new_with_label("Add Recipe");
+    gtk_grid_attach(GTK_GRID(grid), addButton, 3, 0, 1, 1); // Ensure button is visible and properly placed
+    GtkWidget **addWidgets = new GtkWidget *[5]{addNameEntry, addIngredientsEntry, categoryDropdown, addInstructionsTextView, addStatusLabel};
     g_signal_connect(addButton, "clicked", G_CALLBACK(on_add_recipe_clicked), addWidgets);
 
-    // Section 3: View Recipes
-    GtkWidget *viewLabelTitle = gtk_label_new("View All Recipes:");
-    gtk_grid_attach(GTK_GRID(grid), viewLabelTitle, 0, 6, 1, 1);
-
+    // Section: View All Recipes
     GtkWidget *viewRecipesLabel = gtk_label_new("Recipes will appear here...");
-    gtk_grid_attach(GTK_GRID(grid), viewRecipesLabel, 0, 7, 3, 1);
+    gtk_grid_attach(GTK_GRID(grid), viewRecipesLabel, 0, 4, 3, 1);
 
     GtkWidget *viewRecipesButton = gtk_button_new_with_label("View Recipes");
-    gtk_grid_attach(GTK_GRID(grid), viewRecipesButton, 2, 6, 1, 1);
-
+    gtk_grid_attach(GTK_GRID(grid), viewRecipesButton, 3, 4, 1, 1);
     g_signal_connect(viewRecipesButton, "clicked", G_CALLBACK(on_view_recipes_clicked), viewRecipesLabel);
 
-    // Section 4: Delete Recipe
-    GtkWidget *deleteLabelTitle = gtk_label_new("Delete a Recipe:");
-    gtk_grid_attach(GTK_GRID(grid), deleteLabelTitle, 0, 8, 1, 1);
+    // Section: Favorite Recipes
+    GtkWidget *favoriteEntry = gtk_entry_new();
+    gtk_entry_set_placeholder_text(GTK_ENTRY(favoriteEntry), "Recipe Name");
+    gtk_grid_attach(GTK_GRID(grid), favoriteEntry, 0, 5, 1, 1);
 
-    GtkWidget *deleteEntry = gtk_entry_new();
-    gtk_entry_set_placeholder_text(GTK_ENTRY(deleteEntry), "Recipe Name");
-    gtk_grid_attach(GTK_GRID(grid), deleteEntry, 0, 9, 2, 1);
+    GtkWidget *markFavoriteButton = gtk_button_new_with_label("Mark as Favorite");
+    gtk_grid_attach(GTK_GRID(grid), markFavoriteButton, 1, 5, 1, 1);
+    g_signal_connect(markFavoriteButton, "clicked", G_CALLBACK(on_mark_favorite_clicked), favoriteEntry);
 
-    GtkWidget *deleteStatusLabel = gtk_label_new("");
-    gtk_grid_attach(GTK_GRID(grid), deleteStatusLabel, 0, 10, 3, 1);
+    GtkWidget *viewFavoritesLabel = gtk_label_new("Favorite Recipes will appear here...");
+    gtk_grid_attach(GTK_GRID(grid), viewFavoritesLabel, 0, 6, 3, 1);
 
-    GtkWidget *deleteButton = gtk_button_new_with_label("Delete Recipe");
-    gtk_grid_attach(GTK_GRID(grid), deleteButton, 2, 9, 1, 1);
+    GtkWidget *viewFavoritesButton = gtk_button_new_with_label("View Favorite Recipes");
+    gtk_grid_attach(GTK_GRID(grid), viewFavoritesButton, 3, 6, 1, 1);
+    g_signal_connect(viewFavoritesButton, "clicked", G_CALLBACK(on_view_favorite_recipes_clicked), viewFavoritesLabel);
 
-    GtkWidget **deleteWidgets = new GtkWidget *[2]{deleteEntry, deleteStatusLabel};
-    g_signal_connect(deleteButton, "clicked", G_CALLBACK(on_delete_recipe_clicked), deleteWidgets);
+    // Section: Export and Import Recipes
+    GtkWidget *exportButton = gtk_button_new_with_label("Export Recipes");
+    gtk_grid_attach(GTK_GRID(grid), exportButton, 0, 7, 1, 1);
+    g_signal_connect(exportButton, "clicked", G_CALLBACK(on_export_recipes_clicked), NULL);
 
-    // Debug: Print pointers for Add Recipe widgets
-    g_print("Add Recipe Section:\n");
-    g_print(" - Name Entry Widget: %p\n", (void *)addNameEntry);
-    g_print(" - Ingredients Entry Widget: %p\n", (void *)addIngredientsEntry);
-    g_print(" - Status Label Widget: %p\n", (void *)addStatusLabel);
+    GtkWidget *importButton = gtk_button_new_with_label("Import Recipes");
+    gtk_grid_attach(GTK_GRID(grid), importButton, 1, 7, 1, 1);
+    g_signal_connect(importButton, "clicked", G_CALLBACK(on_import_recipes_clicked), NULL);
 
-    // Print all recipes in the database
-    debugPrintAllRecipes();
+    // Section: Clear Database
+    GtkWidget *clearButton = gtk_button_new_with_label("Clear Database");
+    gtk_grid_attach(GTK_GRID(grid), clearButton, 0, 8, 1, 1);
+    GtkWidget *clearStatusLabel = gtk_label_new("");
+    gtk_grid_attach(GTK_GRID(grid), clearStatusLabel, 1, 8, 3, 1);
+    g_signal_connect(clearButton, "clicked", G_CALLBACK(on_clear_database_clicked), clearStatusLabel);
 
-    // Show all widgets
     gtk_widget_show_all(window);
 }
 
-// Main entry point of the application
+// Main entry point
 int main(int argc, char **argv) {
     GtkApplication *app;
     int status;
 
-    // Initialize the GTK application
-    app = gtk_application_new("com.recipe.app", G_APPLICATION_DEFAULT_FLAGS);
+    app = gtk_application_new("com.recipe.manager", G_APPLICATION_FLAGS_NONE);
     g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
 
-    // Run the GTK application
     status = g_application_run(G_APPLICATION(app), argc, argv);
     g_object_unref(app);
 
