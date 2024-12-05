@@ -1,0 +1,56 @@
+/* General Window Styling */
+window {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    font-family: Arial, sans-serif;
+}
+
+/* Button Styling */
+button {
+    background-image: linear-gradient(135deg, #3a3d41, #2d2f31);
+    color: #ffffff;
+    font-weight: bold;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 14px;
+    border: 1px solid #3a3d41;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+button:hover {
+    background-image: linear-gradient(135deg, #5a5e63, #3e4043);
+    border-color: #5a5e63;
+}
+
+/* Entry and TextView Styling */
+entry, textview {
+    border: 1px solid #3a3d41;
+    border-radius: 4px;
+    padding: 8px;
+    background-color: #252526;
+    color: #d4d4d4;
+}
+
+textview {
+    min-height: 100px;
+    padding: 10px;
+}
+
+/* Label Styling */
+label {
+    color: #d4d4d4;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* Grid Margins */
+grid {
+    margin: 30px;
+}
+
+/* Add a subtle border to separate sections */
+separator {
+    background-color: #3a3d41;
+    height: 2px;
+    margin: 20px 0;
+}

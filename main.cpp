@@ -6,6 +6,23 @@
 // Global RecipeManager instance
 RecipeManager manager;
 
+// Function to load CSS file
+void load_css() {
+    GtkCssProvider *provider = gtk_css_provider_new();
+    GdkDisplay *display = gdk_display_get_default();
+    GdkScreen *screen = gdk_display_get_default_screen(display);
+
+    // Load the styles.css file
+    gtk_css_provider_load_from_path(provider, "styles.css", NULL);
+    gtk_style_context_add_provider_for_screen(
+        screen,
+        GTK_STYLE_PROVIDER(provider),
+        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
+    );
+
+    g_object_unref(provider);
+}
+
 // Callback to view all recipes
 void on_view_recipes_clicked(GtkWidget *widget, gpointer data) {
     GtkWidget *label = GTK_WIDGET(data);
@@ -136,6 +153,9 @@ void on_view_favorite_recipes_clicked(GtkWidget *widget, gpointer data) {
 
 // Main application activation function
 static void activate(GtkApplication *app, gpointer user_data) {
+    // Load CSS at activation
+    load_css();
+
     GtkWidget *window;
     GtkWidget *grid;
 
@@ -144,8 +164,8 @@ static void activate(GtkApplication *app, gpointer user_data) {
     gtk_window_set_default_size(GTK_WINDOW(window), 800, 600);
 
     grid = gtk_grid_new();
-    gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
-    gtk_grid_set_row_spacing(GTK_GRID(grid), 10);
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 15);
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 15);
     gtk_container_add(GTK_CONTAINER(window), grid);
 
     // Section: Add Recipe
