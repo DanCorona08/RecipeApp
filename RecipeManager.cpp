@@ -6,6 +6,44 @@
 #include <fstream>
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
+#include <gtk/gtk.h>
+
+// Helper function to copy text to clipboard
+void copy_to_clipboard(GtkWidget *widget, gpointer user_data) {
+    const char *text = static_cast<const char *>(user_data);
+    GtkClipboard *clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    gtk_clipboard_set_text(clipboard, text, -1);
+}
+
+// Static helper function for GTK callback
+static void on_activate(GtkApplication* app, gpointer user_data) {
+    const Recipe* recipe = static_cast<const Recipe*>(user_data);
+
+    GtkWidget* window = gtk_application_window_new(app);
+    gtk_window_set_title(GTK_WINDOW(window), "Recipe Viewer");
+    gtk_window_set_default_size(GTK_WINDOW(window), 400, 300);
+
+    GtkWidget* grid = gtk_grid_new();
+    gtk_container_add(GTK_CONTAINER(window), grid);
+
+    GtkWidget* labelName = gtk_label_new(("Name: " + recipe->name).c_str());
+    gtk_label_set_selectable(GTK_LABEL(labelName), TRUE);
+    gtk_grid_attach(GTK_GRID(grid), labelName, 0, 0, 1, 1);
+
+    GtkWidget* labelInstructions = gtk_label_new(("Instructions: " + recipe->instructions).c_str());
+    gtk_label_set_selectable(GTK_LABEL(labelInstructions), TRUE);
+    gtk_grid_attach(GTK_GRID(grid), labelInstructions, 0, 1, 1, 1);
+
+    GtkWidget* buttonCopyName = gtk_button_new_with_label("Copy Name");
+    g_signal_connect(buttonCopyName, "clicked", G_CALLBACK(copy_to_clipboard), (gpointer)recipe->name.c_str());
+    gtk_grid_attach(GTK_GRID(grid), buttonCopyName, 0, 2, 1, 1);
+
+    GtkWidget* buttonCopyInstructions = gtk_button_new_with_label("Copy Instructions");
+    g_signal_connect(buttonCopyInstructions, "clicked", G_CALLBACK(copy_to_clipboard), (gpointer)recipe->instructions.c_str());
+    gtk_grid_attach(GTK_GRID(grid), buttonCopyInstructions, 0, 3, 1, 1);
+
+    gtk_widget_show_all(window);
+}
 
 // Helper Function: Convert to Lowercase
 std::string toLower(const std::string &str) {
@@ -21,6 +59,13 @@ std::string trim(const std::string &str) {
     return (start == std::string::npos) ? "" : str.substr(start, end - start + 1);
 }
 
+// Helper function to create a selectable label
+GtkWidget* create_selectable_label(const char* text) {
+    GtkWidget *label = gtk_label_new(text);
+    gtk_label_set_selectable(GTK_LABEL(label), TRUE); // Enable text selection
+    return label;
+}
+
 // Constructor: Initialize the SQLite Database
 RecipeManager::RecipeManager() {
     if (sqlite3_open("recipes.db", &db)) {
@@ -29,7 +74,6 @@ RecipeManager::RecipeManager() {
         return;
     }
 
-    // Create the recipes table if it doesn't exist
     const char *createTableSQL = R"(
         CREATE TABLE IF NOT EXISTS recipes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -160,7 +204,7 @@ std::vector<Recipe> RecipeManager::listAllRecipes() const {
             std::string ingredientsStr = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
             recipe.category = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
             recipe.instructions = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 3));
-            recipe.isFavorite = sqlite3_column_int(stmt, 3);
+            recipe.isFavorite = sqlite3_column_int(stmt, 4);
 
             // Parse ingredients into a vector
             std::istringstream iss(ingredientsStr);
@@ -177,6 +221,17 @@ std::vector<Recipe> RecipeManager::listAllRecipes() const {
     }
 
     return recipes;
+}
+
+// Updated displayRecipeUI function
+void RecipeManager::displayRecipeUI(const Recipe& recipe) {
+    GtkApplication* app = gtk_application_new("com.example.recipe", G_APPLICATION_DEFAULT_FLAGS);
+
+    // Replace the lambda with a standard static function
+    g_signal_connect(app, "activate", G_CALLBACK(on_activate), (gpointer)&recipe);
+
+    g_application_run(G_APPLICATION(app), 0, nullptr);
+    g_object_unref(app);
 }
 
 // Toggle Recipe as Favorite

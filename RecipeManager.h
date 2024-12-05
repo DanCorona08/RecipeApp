@@ -41,6 +41,8 @@ public:
     std::vector<Recipe> searchByIngredient(const std::string& ingredient); // Search recipes by ingredient
     std::string getRecipeInstructions(int recipeID); // Fetch instructions by recipe ID
 
+    void displayRecipeUI(const Recipe& recipe);
+
 private:
     sqlite3 *db; // SQLite database connection
 };
