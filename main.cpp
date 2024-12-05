@@ -220,135 +220,165 @@ static void activate(GtkApplication *app, gpointer user_data) {
     gtk_grid_set_row_spacing(GTK_GRID(grid), 15);
     gtk_container_add(GTK_CONTAINER(scrolledWindow), grid);
 
-    // Section: Search Recipes by Ingredient
+    // Section Header: Search Recipes by Ingredient
+    GtkWidget *searchHeader = gtk_label_new(NULL);
+    gtk_label_set_markup(GTK_LABEL(searchHeader), "<span font='16' weight='bold'>Search Recipes by Ingredient</span>");
+    gtk_widget_set_halign(searchHeader, GTK_ALIGN_START);
+    gtk_widget_set_margin_top(searchHeader, 10);
+    gtk_widget_set_margin_bottom(searchHeader, 5);
+    gtk_grid_attach(GTK_GRID(grid), searchHeader, 0, 0, 2, 1);
+
     GtkWidget *ingredientEntry = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(ingredientEntry), "Enter Ingredient");
-    gtk_widget_set_size_request(ingredientEntry, 200, 30); // Fixed size for entry
-    gtk_grid_attach(GTK_GRID(grid), ingredientEntry, 0, 0, 1, 1);
+    gtk_widget_set_size_request(ingredientEntry, 200, 30);
+    gtk_grid_attach(GTK_GRID(grid), ingredientEntry, 0, 1, 1, 1);
 
     GtkWidget *searchButton = gtk_button_new_with_label("Search Recipes");
-    gtk_widget_set_size_request(searchButton, 150, 30); // Fixed size for button
-    gtk_grid_attach(GTK_GRID(grid), searchButton, 1, 0, 1, 1);
+    gtk_widget_set_size_request(searchButton, 150, 30);
+    gtk_grid_attach(GTK_GRID(grid), searchButton, 1, 1, 1, 1);
 
     GtkWidget *resultLabel = gtk_label_new("Results will appear here...");
-    gtk_label_set_xalign(GTK_LABEL(resultLabel), 0); // Align text to the left
-    gtk_label_set_line_wrap(GTK_LABEL(resultLabel), TRUE); // Enable line wrapping
-    gtk_label_set_max_width_chars(GTK_LABEL(resultLabel), 70); // Limit maximum width
-    gtk_widget_set_size_request(resultLabel, 600, 200); // Fixed size for the label
-    gtk_grid_attach(GTK_GRID(grid), resultLabel, 0, 1, 2, 1);
+    gtk_label_set_xalign(GTK_LABEL(resultLabel), 0);
+    gtk_label_set_line_wrap(GTK_LABEL(resultLabel), TRUE);
+    gtk_label_set_max_width_chars(GTK_LABEL(resultLabel), 70);
+    gtk_widget_set_size_request(resultLabel, 600, 200);
+    gtk_grid_attach(GTK_GRID(grid), resultLabel, 0, 2, 2, 1);
 
     GtkWidget **searchWidgets = new GtkWidget *[2]{ingredientEntry, resultLabel};
     g_signal_connect(searchButton, "clicked", G_CALLBACK(on_search_by_ingredient_clicked), searchWidgets);
 
-    // Section: Fetch Recipe Instructions by ID
+    // Section Header: Fetch Recipe Instructions
+    GtkWidget *instructionsHeader = gtk_label_new(NULL);
+    gtk_label_set_markup(GTK_LABEL(instructionsHeader), "<span font='16' weight='bold'>Fetch Recipe Instructions</span>");
+    gtk_widget_set_halign(instructionsHeader, GTK_ALIGN_START);
+    gtk_widget_set_margin_top(instructionsHeader, 10);
+    gtk_widget_set_margin_bottom(instructionsHeader, 5);
+    gtk_grid_attach(GTK_GRID(grid), instructionsHeader, 0, 3, 2, 1);
+
     GtkWidget *idEntry = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(idEntry), "Enter Recipe ID");
-    gtk_widget_set_size_request(idEntry, 200, 30); // Fixed size for entry
-    gtk_grid_attach(GTK_GRID(grid), idEntry, 0, 2, 1, 1);
+    gtk_widget_set_size_request(idEntry, 200, 30);
+    gtk_grid_attach(GTK_GRID(grid), idEntry, 0, 4, 1, 1);
 
     GtkWidget *instructionsButton = gtk_button_new_with_label("Get Instructions");
-    gtk_widget_set_size_request(instructionsButton, 150, 30); // Fixed size for button
-    gtk_grid_attach(GTK_GRID(grid), instructionsButton, 1, 2, 1, 1);
+    gtk_widget_set_size_request(instructionsButton, 150, 30);
+    gtk_grid_attach(GTK_GRID(grid), instructionsButton, 1, 4, 1, 1);
 
     GtkWidget *instructionsLabel = gtk_label_new("Instructions will appear here...");
-    gtk_label_set_xalign(GTK_LABEL(instructionsLabel), 0); // Align text to the left
-    gtk_label_set_line_wrap(GTK_LABEL(instructionsLabel), TRUE); // Enable line wrapping
-    gtk_label_set_max_width_chars(GTK_LABEL(instructionsLabel), 70); // Limit maximum width
-    gtk_widget_set_size_request(instructionsLabel, 600, 200); // Fixed size for the label
-    gtk_grid_attach(GTK_GRID(grid), instructionsLabel, 0, 3, 2, 1);
+    gtk_label_set_xalign(GTK_LABEL(instructionsLabel), 0);
+    gtk_label_set_line_wrap(GTK_LABEL(instructionsLabel), TRUE);
+    gtk_label_set_max_width_chars(GTK_LABEL(instructionsLabel), 70);
+    gtk_widget_set_size_request(instructionsLabel, 600, 200);
+    gtk_grid_attach(GTK_GRID(grid), instructionsLabel, 0, 5, 2, 1);
 
     GtkWidget **instructionWidgets = new GtkWidget *[2]{idEntry, instructionsLabel};
     g_signal_connect(instructionsButton, "clicked", G_CALLBACK(on_get_instructions_clicked), instructionWidgets);
 
-    // Section: Add Recipe
+    // Section Header: Add a Recipe
+    GtkWidget *addHeader = gtk_label_new(NULL);
+    gtk_label_set_markup(GTK_LABEL(addHeader), "<span font='16' weight='bold'>Add a Recipe</span>");
+    gtk_widget_set_halign(addHeader, GTK_ALIGN_START);
+    gtk_widget_set_margin_top(addHeader, 10);
+    gtk_widget_set_margin_bottom(addHeader, 5);
+    gtk_grid_attach(GTK_GRID(grid), addHeader, 0, 6, 2, 1);
+
     GtkWidget *addNameEntry = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(addNameEntry), "Recipe Name");
-    gtk_widget_set_size_request(addNameEntry, 200, 30); // Fixed size for entry
-    gtk_grid_attach(GTK_GRID(grid), addNameEntry, 0, 4, 1, 1);
+    gtk_widget_set_size_request(addNameEntry, 200, 30);
+    gtk_grid_attach(GTK_GRID(grid), addNameEntry, 0, 7, 1, 1);
 
     GtkWidget *addIngredientsEntry = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(addIngredientsEntry), "Ingredients (comma-separated)");
-    gtk_widget_set_size_request(addIngredientsEntry, 200, 30); // Fixed size for entry
-    gtk_grid_attach(GTK_GRID(grid), addIngredientsEntry, 1, 4, 1, 1);
+    gtk_widget_set_size_request(addIngredientsEntry, 200, 30);
+    gtk_grid_attach(GTK_GRID(grid), addIngredientsEntry, 1, 7, 1, 1);
 
     GtkWidget *categoryDropdown = gtk_combo_box_text_new();
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(categoryDropdown), NULL, "Breakfast");
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(categoryDropdown), NULL, "Lunch");
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(categoryDropdown), NULL, "Dinner");
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(categoryDropdown), NULL, "Dessert");
-    gtk_widget_set_size_request(categoryDropdown, 150, 30); // Fixed size for dropdown
-    gtk_grid_attach(GTK_GRID(grid), categoryDropdown, 2, 4, 1, 1);
+    gtk_widget_set_size_request(categoryDropdown, 150, 30);
+    gtk_grid_attach(GTK_GRID(grid), categoryDropdown, 2, 7, 1, 1);
 
     GtkWidget *addInstructionsTextView = gtk_text_view_new();
     gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(addInstructionsTextView), GTK_WRAP_WORD);
     gtk_text_view_set_justification(GTK_TEXT_VIEW(addInstructionsTextView), GTK_JUSTIFY_LEFT);
-    gtk_widget_set_size_request(addInstructionsTextView, 600, 100); // Fixed size for multi-line text
-    gtk_grid_attach(GTK_GRID(grid), addInstructionsTextView, 0, 5, 3, 1);
+    gtk_widget_set_size_request(addInstructionsTextView, 600, 100);
+    gtk_grid_attach(GTK_GRID(grid), addInstructionsTextView, 0, 8, 3, 1);
 
     GtkWidget *addStatusLabel = gtk_label_new("");
-    gtk_widget_set_size_request(addStatusLabel, 600, 30); // Fixed size for label
-    gtk_grid_attach(GTK_GRID(grid), addStatusLabel, 0, 6, 3, 1);
+    gtk_widget_set_size_request(addStatusLabel, 600, 30);
+    gtk_grid_attach(GTK_GRID(grid), addStatusLabel, 0, 9, 3, 1);
 
     GtkWidget *addButton = gtk_button_new_with_label("Add Recipe");
-    gtk_widget_set_size_request(addButton, 150, 30); // Fixed size for button
-    gtk_grid_attach(GTK_GRID(grid), addButton, 3, 4, 1, 1);
+    gtk_widget_set_size_request(addButton, 150, 30);
+    gtk_grid_attach(GTK_GRID(grid), addButton, 3, 7, 1, 1);
     GtkWidget **addWidgets = new GtkWidget *[5]{addNameEntry, addIngredientsEntry, categoryDropdown, addInstructionsTextView, addStatusLabel};
     g_signal_connect(addButton, "clicked", G_CALLBACK(on_add_recipe_clicked), addWidgets);
 
-    // Section: View All Recipes
+    // Section Header: View All Recipes
+    GtkWidget *viewHeader = gtk_label_new(NULL);
+    gtk_label_set_markup(GTK_LABEL(viewHeader), "<span font='16' weight='bold'>View All Recipes</span>");
+    gtk_widget_set_halign(GTK_WIDGET(viewHeader), GTK_ALIGN_START);
+    gtk_widget_set_margin_top(viewHeader, 10);
+    gtk_widget_set_margin_bottom(viewHeader, 5);
+    gtk_grid_attach(GTK_GRID(grid), viewHeader, 0, 10, 2, 1);
+
     GtkWidget *viewRecipesLabel = gtk_label_new("Recipes will appear here...");
-    gtk_label_set_line_wrap(GTK_LABEL(viewRecipesLabel), TRUE); // Enable line wrapping
-    gtk_label_set_max_width_chars(GTK_LABEL(viewRecipesLabel), 70); // Limit maximum width
-    gtk_widget_set_size_request(viewRecipesLabel, 600, 200); // Fixed size for label
-    gtk_grid_attach(GTK_GRID(grid), viewRecipesLabel, 0, 8, 3, 1);
+    gtk_label_set_line_wrap(GTK_LABEL(viewRecipesLabel), TRUE);
+    gtk_label_set_max_width_chars(GTK_LABEL(viewRecipesLabel), 70);
+    gtk_widget_set_size_request(viewRecipesLabel, 600, 200);
+    gtk_grid_attach(GTK_GRID(grid), viewRecipesLabel, 0, 11, 3, 1);
 
     GtkWidget *viewRecipesButton = gtk_button_new_with_label("View Recipes");
-    gtk_widget_set_size_request(viewRecipesButton, 150, 30); // Fixed size for button
-    gtk_grid_attach(GTK_GRID(grid), viewRecipesButton, 3, 8, 1, 1);
+    gtk_widget_set_size_request(viewRecipesButton, 150, 30);
+    gtk_grid_attach(GTK_GRID(grid), viewRecipesButton, 3, 11, 1, 1);
     g_signal_connect(viewRecipesButton, "clicked", G_CALLBACK(on_view_recipes_clicked), viewRecipesLabel);
 
-    // Section: Favorite Recipes
+    // Section Header: Favorite Recipes
+    GtkWidget *favoriteHeader = gtk_label_new(NULL);
+    gtk_label_set_markup(GTK_LABEL(favoriteHeader), "<span font='16' weight='bold'>Favorite Recipes</span>");
+    gtk_widget_set_halign(favoriteHeader, GTK_ALIGN_START);
+    gtk_widget_set_margin_top(favoriteHeader, 10);
+    gtk_widget_set_margin_bottom(favoriteHeader, 5);
+    gtk_grid_attach(GTK_GRID(grid), favoriteHeader, 0, 12, 2, 1);
+
     GtkWidget *favoriteEntry = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(favoriteEntry), "Recipe Name");
-    gtk_widget_set_size_request(favoriteEntry, 200, 30); // Fixed size for entry
-    gtk_grid_attach(GTK_GRID(grid), favoriteEntry, 0, 9, 1, 1);
+    gtk_widget_set_size_request(favoriteEntry, 200, 30);
+    gtk_grid_attach(GTK_GRID(grid), favoriteEntry, 0, 13, 1, 1);
 
     GtkWidget *markFavoriteButton = gtk_button_new_with_label("Mark as Favorite");
-    gtk_widget_set_size_request(markFavoriteButton, 150, 30); // Fixed size for button
-    gtk_grid_attach(GTK_GRID(grid), markFavoriteButton, 1, 9, 1, 1);
+    gtk_widget_set_size_request(markFavoriteButton, 150, 30);
+    gtk_grid_attach(GTK_GRID(grid), markFavoriteButton, 1, 13, 1, 1);
     g_signal_connect(markFavoriteButton, "clicked", G_CALLBACK(on_mark_favorite_clicked), favoriteEntry);
 
     GtkWidget *viewFavoritesLabel = gtk_label_new("Favorite Recipes will appear here...");
-    gtk_label_set_line_wrap(GTK_LABEL(viewFavoritesLabel), TRUE); // Enable line wrapping
-    gtk_label_set_max_width_chars(GTK_LABEL(viewFavoritesLabel), 70); // Limit maximum width
-    gtk_widget_set_size_request(viewFavoritesLabel, 600, 200); // Fixed size for label
-    gtk_grid_attach(GTK_GRID(grid), viewFavoritesLabel, 0, 10, 3, 1);
+    gtk_label_set_line_wrap(GTK_LABEL(viewFavoritesLabel), TRUE);
+    gtk_label_set_max_width_chars(GTK_LABEL(viewFavoritesLabel), 70);
+    gtk_widget_set_size_request(viewFavoritesLabel, 600, 200);
+    gtk_grid_attach(GTK_GRID(grid), viewFavoritesLabel, 0, 14, 3, 1);
 
     GtkWidget *viewFavoritesButton = gtk_button_new_with_label("View Favorite Recipes");
-    gtk_widget_set_size_request(viewFavoritesButton, 150, 30); // Fixed size for button
-    gtk_grid_attach(GTK_GRID(grid), viewFavoritesButton, 3, 10, 1, 1);
+    gtk_widget_set_size_request(viewFavoritesButton, 150, 30);
+    gtk_grid_attach(GTK_GRID(grid), viewFavoritesButton, 3, 14, 1, 1);
     g_signal_connect(viewFavoritesButton, "clicked", G_CALLBACK(on_view_favorite_recipes_clicked), viewFavoritesLabel);
 
-    // Section: Export and Import Recipes
+    // Section: Export, Import, and Clear Database
     GtkWidget *exportButton = gtk_button_new_with_label("Export Recipes");
-    gtk_widget_set_size_request(exportButton, 150, 30); // Fixed size for button
-    gtk_grid_attach(GTK_GRID(grid), exportButton, 0, 11, 1, 1);
+    gtk_widget_set_size_request(exportButton, 150, 30);
+    gtk_grid_attach(GTK_GRID(grid), exportButton, 0, 15, 1, 1);
     g_signal_connect(exportButton, "clicked", G_CALLBACK(on_export_recipes_clicked), NULL);
 
     GtkWidget *importButton = gtk_button_new_with_label("Import Recipes");
-    gtk_widget_set_size_request(importButton, 150, 30); // Fixed size for button
-    gtk_grid_attach(GTK_GRID(grid), importButton, 1, 11, 1, 1);
+    gtk_widget_set_size_request(importButton, 150, 30);
+    gtk_grid_attach(GTK_GRID(grid), importButton, 1, 15, 1, 1);
     g_signal_connect(importButton, "clicked", G_CALLBACK(on_import_recipes_clicked), NULL);
 
-    // Section: Clear Database
     GtkWidget *clearButton = gtk_button_new_with_label("Clear Database");
-    gtk_widget_set_size_request(clearButton, 150, 30); // Fixed size for button
-    gtk_grid_attach(GTK_GRID(grid), clearButton, 0, 12, 1, 1);
-
-    GtkWidget *clearStatusLabel = gtk_label_new("");
-    gtk_widget_set_size_request(clearStatusLabel, 600, 30); // Fixed size for label
-    gtk_grid_attach(GTK_GRID(grid), clearStatusLabel, 1, 12, 3, 1);
-    g_signal_connect(clearButton, "clicked", G_CALLBACK(on_clear_database_clicked), clearStatusLabel);
+    gtk_widget_set_size_request(clearButton, 150, 30);
+    gtk_grid_attach(GTK_GRID(grid), clearButton, 2, 15, 1, 1);
+    g_signal_connect(clearButton, "clicked", G_CALLBACK(on_clear_database_clicked), NULL);
 
     gtk_widget_show_all(window);
 }

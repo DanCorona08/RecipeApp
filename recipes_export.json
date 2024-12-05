@@ -1,22 +1,13 @@
 [
     {
         "category": "Dinner",
-        "favorite": true,
+        "favorite": false,
         "ingredients": [
             "pasta",
             "tomato sauce",
             "cheese"
         ],
+        "instructions": "Step 1. Boil pasta for 10 mins.\nStep 2. Heat tomato sauce.\nStep 3. Drain pasta and combine tomato sauce and pasta.\nStep 4. Add cheese.",
         "name": "Pasta"
-    },
-    {
-        "category": "Lunch",
-        "favorite": false,
-        "ingredients": [
-            "water",
-            "oil",
-            "flour"
-        ],
-        "name": "Bread"
     }
 ]
