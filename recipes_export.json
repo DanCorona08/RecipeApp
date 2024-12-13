@@ -1,13 +1,12 @@
 [
     {
         "category": "Dinner",
-        "favorite": false,
+        "favorite": true,
         "ingredients": [
             "pasta",
-            "tomato sauce",
-            "cheese"
+            "tomato sauce"
         ],
-        "instructions": "Step 1. Boil pasta for 10 mins.\nStep 2. Heat tomato sauce.\nStep 3. Drain pasta and combine tomato sauce and pasta.\nStep 4. Add cheese.",
+        "instructions": "Step1.\nStep 2.",
         "name": "Pasta"
     }
 ]
